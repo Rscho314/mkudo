@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>microkanren.ijs</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+  </style>
+  <link rel="stylesheet" href="joxygen.css" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">microkanren.ijs</h1>
+</header>
+<p>This script is an attempt at a mostly verbatim implementation of <a href="https://github.com/jasonhemann/microKanren-DLS-16">scheme microkanren</a>.<br />
+</p>
+<ul>
+<li>Trees are represented by nested boxed arrays.<br />
+</li>
+<li>Variables are integers and are considered in scope if lying between zero and 1-length of the state array.<br />
+</li>
+<li>Promises are boxed strings, and are forced by the <em>execute</em> verb (<code>".</code>).<br />
+</li>
+<li>The indeterminate value (<code>_.</code>) was chosen as initial value in the state array because of its limited usefulness in the J language, and to allow unification with the empty array (<code>''</code>). <code>_.</code> is therefore a marker of the freshness of a variable.</li>
+</ul>
+<p><strong>CAUTION: there certainly are major bugs and misunderstandings in this, due to my inexpertise in both logic and J!</strong></p>
+<h2>Definitions</h2>
+<table class="map">
+<tr>
+<td class="key">
+A
+</td>
+<td>
+<a href="#apm">apm</a>, <a href="#app">app</a>
+</td>
+</tr>
+<tr>
+<td class="key">
+C
+</td>
+<td>
+<a href="#cis">cis</a>, <a href="#con">con</a>
+</td>
+</tr>
+<tr>
+<td class="key">
+D
+</td>
+<td>
+<a href="#dis">dis</a>
+</td>
+</tr>
+<tr>
+<td class="key">
+E
+</td>
+<td>
+<a href="#equ">equ</a>, <a href="#ext">ext</a>
+</td>
+</tr>
+<tr>
+<td class="key">
+F
+</td>
+<td>
+<a href="#fsh">fsh</a>
+</td>
+</tr>
+<tr>
+<td class="key">
+G
+</td>
+<td>
+<a href="#get">get</a>
+</td>
+</tr>
+<tr>
+<td class="key">
+O
+</td>
+<td>
+<a href="#occ">occ</a>
+</td>
+</tr>
+<tr>
+<td class="key">
+U
+</td>
+<td>
+<a href="#uni">uni</a>
+</td>
+</tr>
+<tr>
+<td class="key">
+V
+</td>
+<td>
+<a href="#var">var</a>
+</td>
+</tr>
+</table>
+<h2 class="hdef" id="apm">apm (conjunction)</h2>
+<pre><code>scheme: $append-map</code></pre>
+<p>Works similarly to app. apm is a conjunction only because it has to handle functions as arguments.</p>
+<h2 class="hdef" id="app">app (dyad)</h2>
+<pre><code>scheme: $append</code></pre>
+<p>Test x, and if a promise makes a new promise with reversed arguments (line 4). Otherwise appends and recurs (line 5). The depth of recursion is usually not too great, so it seems ok.</p>
+<h2 class="hdef" id="cis">cis (conjunction)</h2>
+<pre><code>scheme: call/initial-state</code></pre>
+<p>Notice the initial state is a boxed indeterminate value, in our case. We ‘fold’ over the initial promise a user-defined number of times. Since this actually does not map over a sequence but only produces one as we go, this is more akin to a loop.</p>
+<h2 class="hdef" id="con">con (conjunction)</h2>
+<pre><code>scheme: conj</code></pre>
+<p>Conjunction.</p>
+<h2 class="hdef" id="dis">dis (conjunction)</h2>
+<pre><code>scheme: disj</code></pre>
+<p>Disjunction.</p>
+<h2 class="hdef" id="equ">equ (conjunction)</h2>
+<pre><code>scheme: ==
+example: 0 equ &#39;a&#39; (&lt;_.)</code></pre>
+<p>The equivalence constraint. u and v are values to be unified. y is the state array. All constraints must define an optional default rank in x.</p>
+<h2 class="hdef" id="ext">ext (dyad)</h2>
+<pre><code>scheme: ext-s
+example: (&lt;_.) ext 0;&#39;a&#39;</code></pre>
+<p>Replaces the values of y by their substitutions according to x, and stores that in a. For unification to occur, the pair must 1.pass the occurs check and 2.the substituted values must be either identical to themselves (i.e. fresh variables) or identical to the values pointed to in the substitution. Unification then occurs by amending the positions pointed to in x by those in a.</p>
+<h2 class="hdef" id="fsh">fsh (adverb)</h2>
+<pre><code>scheme: call/fresh
+example: ] fsh &#39;&#39;</code></pre>
+<p>Introduces a new variable by extending the state array y with an indeterminate value.</p>
+<h2 class="hdef" id="get">get (dyad)</h2>
+<pre><code>scheme: find
+example: (_.;&#39;a&#39;) get 1</code></pre>
+<p>Walks the state x to find the substitution of y.<br />
+Tests whether the position y in x is <code>&lt;_.</code>. If <code>&lt;_.</code> is found or the verb fails, y is returned. Otherwise the y-th element is returned. Walking the state is done by executing until the result stops changing.</p>
+<h2 class="hdef" id="occ">occ (dyad)</h2>
+<pre><code>scheme: occurs?
+example: (&lt;2) occ &lt;&lt;2</code></pre>
+<p>Tests x &amp; y for identity, and returns zero in that case. If x &amp; y are different, we flatten the tree y to a list of leaves and check for x membership in the flattened tree.</p>
+<h2 class="hdef" id="uni">uni (conjunction)</h2>
+<pre><code>scheme: unify
+example: (_ _) 0 uni &#39;a&#39; (&lt;_.)</code></pre>
+<p>We test u &amp; v for identity, and return the substitution y unchanged if true. We then check that all variables in the terms to be unified are in scope by flattening the tree and comparing to the length of y. Rank polymorphism is then achieved by splitting the terms according to the desired left and right ranks given in x. We map the tree in paths to obtain a list of paths, and then filter the variable paths into vp. Substitution paths are obtained in vs by negating the first element of each variable path. We check that all substitution paths are present in the paths in fp by checking for membership in all prefixes of the path list. We rearrange into 2 columns with variables on the left, and values to be unified on the right. Rows of the table t are then filtered to eliminate identical values and cycles in ft. Finally, the state is updated.</p>
+<h2 class="hdef" id="var">var (monad)</h2>
+<pre><code>scheme: var?
+example: var 3</code></pre>
+<p>This predicate test whether y is of type integer and is not a vector.<br />
+</p>
+</body>
+</html>
