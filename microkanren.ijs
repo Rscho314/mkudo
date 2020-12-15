@@ -1,6 +1,8 @@
-
+0 : 0
+- For now, changed variable definition as in Udovicic
+- For now, failure bubbles up but later handle as in MiniKanren!
+)
 NB.var=:0:`(-:&1@*)@.(-:&''@$*. e.&1 4@(3!:0))
-NB.for now, changed variable definition as in Udovicic
 var=:(=&1@# *. +./@:e.&(;/'xyz'))
 
 unify=: 4 : 0 NB.will require special case for non-boxed terms!
@@ -9,8 +11,8 @@ NB.TERM FORMATTING & HELPERS
  depthy=.L.y
  pomx=.2^<:depthx
  pomy=.2^<:depthy
- x=.(<x)(<0 0 0)}(depthx,pomx,4)$<_ NB.a
- y=.(<y)(<0 0 0)}(depthx,pomx,4)$<_ NB.b
+ x=.(<x)(<0 0 0)}(depthx,pomx,4)$a: NB.a
+ y=.(<y)(<0 0 0)}(depthx,pomx,4)$a: NB.b
  jx=.2&^i.depthx NB.broja
  jy=.2&^i.depthy NB.brojb
  kx=.depthx$_1 NB.broja1
@@ -20,13 +22,21 @@ NB.TERM RESTRUCTURING AS 3D ARRAYS
  x=.depthx jx formnivo kx x
  y=.depthy jy formnivo ky y
 NB.other dimensions assignements
- x=.depthx oda jx x
- y=.depthy oda jy y
+ x=.depthx oda jx x;'x' NB.required to pass a "quotation"
+ y=.depthy oda jy y;'y'
 
 NB.UNIFICATION PROPER
-NB.term merging
+ for_j. i.depthx
+  do.
+   for_k. i.j{jx
+    do.
+     try. 'x y'=.j k unifclosure x y catcht. 'failure' return. end.
+   end.
+ end.
 
- y
+NB.BUILDING THE SUBSTITUTION LIST
+
+,.x;<y
 )
 
 formnivo =: 2 : 0 NB.formnivoa:x=depthx;u=broja;v=broja1;y=a
@@ -59,18 +69,54 @@ y
 )
 
 oda =: 2 : 0 NB.depthx oda jx x
+ 'arr sym'=.y NB.required as a form of quotation
  for_j. i.u
   do.
    for_k. i.j{v
     do.
-     if. (<_1)-.@-:y{::~j,k,0 do. p=.var y{::~j,k,0 end.
-     y=.(<<'t';j,k)(<j,k,1)}y NB.'t' is the "symbol quotation"
-     y=.(<<0)(<j,k,2)}y
-     if. p do. y=.(<<y{::~j,k,0)(<j,k,3)}y end.
-     if. -.p do. y=.(<a:)(<j,k,3)}y end.
+     if. (<_1)-.@-:arr{::~j,k,0 do. p=.var arr{::~j,k,0 end.
+     arr=.(<<sym;j,k)(<j,k,1)}arr
+     arr=.(<<0)(<j,k,2)}arr
+     if. p do. arr=.(<<arr{::~j,k,0)(<j,k,3)}arr end.
+     if. -.p do. arr=.(<a:)(<j,k,3)}arr end.
    end.
  end.
-y
+arr
+)
+
+spajanje =: 2 : 0 NB.x is n1; u is b1; v is a; y is b
+ if. var {.v{::~x,u,0
+  do.
+   y=.(>:L:0 v{~<x,u,2)(<x,u,2)}y
+   y=.(<@/:~@~.(v{::~x,u,3),(y{::~x,u,3))(<x,u,3)}y NB.consing on empty list
+   v=.(<'y';x,u)(<x,u,1)}v
+ else.
+   v=.(>:L:0 v{~<x,u,2)(<x,u,2)}v
+   v=.(<@/:~@~.(v{::~x,u,3),(y{::~x,u,3))(<x,u,3)}v NB.consing on empty list
+   y=.(<'x';x,u)(<x,u,1)}y
+ end.
+v;<y
+)
+
+unifclosure =: 2 : 0 NB.x is n; u is redbr;v is a; y is b
+ s1=.v{::~x,u,0
+ t1=.y{::~x,u,0
+ if. (s1-.@-:<_1)*.(t1-.@-:<_1)*.(s1-.@-:t1)
+  do.
+   if. (0-:var{.s1)*.(0-:var{.t1)
+    do.
+     if. (2<:L.s1)*.(2<:L.t1)*.({.s1)-:({.t1)
+      do.
+       'v y'=.x u spajanje v y
+     else. throw.
+     end.
+   end.
+   if. -.(0-:var{.s1)*.(0-:var{.t1)
+    do.
+     'v y'=.x u spajanje v y
+   end.
+ end.
+v;<y
 )
 
 NB.(<'a')unify(<'b')
