@@ -1,8 +1,3 @@
-0 : 0
-- For now, changed variable definition as in Udovicic
-- For now, failure bubbles up but later handle as in MiniKanren!
-)
-NB.var=:0:`(-:&1@*)@.(-:&''@$*. e.&1 4@(3!:0))
 var=:(=&1@# *. +./@:e.&(;/'xyz'))
 
 unify=: 4 : 0 NB.will require special case for non-boxed terms!
@@ -35,8 +30,28 @@ NB.UNIFICATION PROPER
  end.
 
 NB.BUILDING THE SUBSTITUTION LIST
+ sigma =. ''
+ for_j. i.depthx
+  do.
+   for_k. i.j{jx
+    do.
+     sigma=.j k dodajel x sigma
+   end.
+ end.
+ for_j. i.depthy
+  do.
+   for_k. i.j{jy
+    do.
+     sigma=.j k dodajel y sigma
+   end.
+ end.
 
-,.x;<y
+echo x{~<2 2 0
+echo x{~<0 0 0
+echo y{~<1 0 0
+echo x{~<1 1 0
+
+sigma
 )
 
 formnivo =: 2 : 0 NB.formnivoa:x=depthx;u=broja;v=broja1;y=a
@@ -119,7 +134,21 @@ unifclosure =: 2 : 0 NB.x is n; u is redbr;v is a; y is b
 v;<y
 )
 
+dodajel =: 2 : 0 NB. x is i; u is j; v is a; y is sigma
+ if. (<_1)-.@-:v{::~x,u,0
+  do.
+   l=.v{::~x,u,3
+   p=.var{.v{::~x,u,0
+   if. (p=0)*.l-.@-:,a:
+    do.
+     y=.y,(v{~<x,u,3),v{~<x,u,1
+   end.
+ end.
+y
+)
+
 NB.(<'a')unify(<'b')
 NB.('f';<<'a')unify('g';<<'b')
 NB.('f';(<'x');<'g';<<'a')unify('f';('g';<<'y');<'g';<<'y')
+NB.('f';<<'x')unify('f';<<'a')
 
